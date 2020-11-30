@@ -23,22 +23,36 @@ class TabEntry {
     tab.classList.add("tab-entry");
     tab.draggable = true;
     tab.setAttribute("data-tab-id", this.id);
-    if(this.discarded) {
+    if (this.discarded) {
       tab.classList.add("discarded-tab");
     }
 
     tab.addEventListener("click", (e) => {
       // if we have any modifier keys or other buttons then do nothing
-      if(e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) {
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) {
         return;
       }
 
       // don't change tab if we're closing the tab
-      if(this.aboutToClose) {
+      if (this.aboutToClose) {
         return;
       }
 
       this.changeTab()
+    });
+
+    // inhibit autoscroll - https://github.com/Rapptz/power-tabs/pull/20/commits/7b10369a2bef02d0a1e1c0e03cca28bcb440ea6b
+    tab.addEventListener("mousedown", (e) => {
+      if (e.button == 1) {
+        e.preventDefault();
+      }
+    });
+
+    // close tab on middle-click
+    tab.addEventListener("auxclick", (e) => {
+      if (e.button == 1) {
+        this.close();
+      }
     });
 
     tab.title = this.title;
@@ -73,11 +87,11 @@ class TabEntry {
 
     this._audibleIcon = audibleIcon;
 
-    if(!this.audible) {
+    if (!this.audible) {
       audibleIcon.style.display = "none";
     }
 
-    if(this.muted) {
+    if (this.muted) {
       audibleIcon.classList.add("muted");
     }
 
@@ -93,8 +107,8 @@ class TabEntry {
 
   static tabIdFromEvent(e) {
     let el = e.target;
-    while(el) {
-      if(el.nodeType == 1 && el.hasAttribute("data-tab-id")) {
+    while (el) {
+      if (el.nodeType == 1 && el.hasAttribute("data-tab-id")) {
         return parseInt(el.getAttribute("data-tab-id"));
       }
       el = el.parentNode;
@@ -103,7 +117,7 @@ class TabEntry {
   }
 
   get tabIndex() {
-    if(!this.group) {
+    if (!this.group) {
       return -1;
     }
     return this.group.tabIndex(this.id);
@@ -117,27 +131,25 @@ class TabEntry {
       onClick: (e) => this.reload()
     });
 
-    if(this.muted) {
+    if (this.muted) {
       items.push({
         name: "Unmute Tab",
         onClick: (e) => this.unmute()
       });
-    }
-    else {
+    } else {
       items.push({
         name: "Mute Tab",
         onClick: (e) => this.mute()
       });
     }
 
-    items.push({name: "separator"});
-    if(this.pinned) {
+    items.push({ name: "separator" });
+    if (this.pinned) {
       items.push({
         name: "Unpin Tab",
         onClick: (e) => this.unpin()
       });
-    }
-    else {
+    } else {
       items.push({
         name: "Pin Tab",
         onClick: (e) => this.pin()
@@ -151,8 +163,7 @@ class TabEntry {
 
     items.push({
       name: "Move To",
-      items: [
-        {
+      items: [{
           name: "New Window",
           onClick: (e) => this.moveToNewWindow()
         },
@@ -169,7 +180,7 @@ class TabEntry {
       }))
     });
 
-    items.push({name: "separator"});
+    items.push({ name: "separator" });
 
     items.push({
       name: "Close Tabs Above",
@@ -189,12 +200,12 @@ class TabEntry {
       onClick: (e) => this.group.closeExcept(this.tabIndex)
     });
 
-    items.push({name: "separator"});
+    items.push({ name: "separator" });
     items.push({
       name: "Undo Close Tab",
-      onClick: async (e) => {
-        let last = await browser.sessions.getRecentlyClosed({maxResults: 1});
-        if(last.length === 0) {
+      onClick: async(e) => {
+        let last = await browser.sessions.getRecentlyClosed({ maxResults: 1 });
+        if (last.length === 0) {
           return;
         }
         let obj = last[0].tab || last[0].window;
@@ -223,19 +234,19 @@ class TabEntry {
   }
 
   mute() {
-    return browser.tabs.update(this.id, {muted: true});
+    return browser.tabs.update(this.id, { muted: true });
   }
 
   unmute() {
-    return browser.tabs.update(this.id, {muted: false});
+    return browser.tabs.update(this.id, { muted: false });
   }
 
   pin() {
-    return browser.tabs.update(this.id, {pinned: true});
+    return browser.tabs.update(this.id, { pinned: true });
   }
 
   unpin() {
-    return browser.tabs.update(this.id, {pinned: false});
+    return browser.tabs.update(this.id, { pinned: false });
   }
 
   duplicate() {
@@ -275,21 +286,21 @@ class TabEntry {
 
   toggleActive(value) {
     this.active = value;
-    if(value) {
+    if (value) {
       this.lastAccessed = new Date().getTime();
     }
 
-    if(this.group) {
+    if (this.group) {
       this.group.toggleActive(this, value);
     }
-    if(value) {
+    if (value) {
       this.scrollTo();
     }
   }
 
   scrollTo() {
-    if(!isElementInViewport(this.view)) {
-      this.view.scrollIntoView({block: "center", inline: "nearest"});
+    if (!isElementInViewport(this.view)) {
+      this.view.scrollIntoView({ block: "center", inline: "nearest" });
     }
   }
 
@@ -307,48 +318,48 @@ class TabEntry {
   }
 
   update(changeInfo) {
-    if(changeInfo.hasOwnProperty("status")) {
+    if (changeInfo.hasOwnProperty("status")) {
       this._iconView.classList.toggle("loading", changeInfo.status === "loading");
     }
 
-    if(changeInfo.hasOwnProperty("pinned")) {
+    if (changeInfo.hasOwnProperty("pinned")) {
       this.pinned = changeInfo.pinned;
     }
 
-    if(changeInfo.hasOwnProperty("favIconUrl")) {
+    if (changeInfo.hasOwnProperty("favIconUrl")) {
       this.updateIcon(changeInfo.favIconUrl);
     }
 
-    if(changeInfo.hasOwnProperty("title")) {
+    if (changeInfo.hasOwnProperty("title")) {
       this.updateTitle(changeInfo.title);
     }
 
-    if(changeInfo.hasOwnProperty("url")) {
+    if (changeInfo.hasOwnProperty("url")) {
       this.url = changeInfo.url;
     }
 
-    if(changeInfo.hasOwnProperty("audible")) {
+    if (changeInfo.hasOwnProperty("audible")) {
       this.audible = changeInfo.audible;
       this._audibleIcon.style.display = changeInfo.audible ? "initial" : "none";
     }
 
-    if(changeInfo.hasOwnProperty("mutedInfo")) {
+    if (changeInfo.hasOwnProperty("mutedInfo")) {
       this.mutedInfo = changeInfo.mutedInfo;
       this._audibleIcon.classList.toggle("muted", this.muted);
     }
 
-    if(changeInfo.hasOwnProperty("discarded")) {
+    if (changeInfo.hasOwnProperty("discarded")) {
       this.discarded = changeInfo.discarded;
       this.view.classList.toggle("discarded-tab", changeInfo.discarded);
     }
 
-    if(changeInfo.hasOwnProperty("index")) {
+    if (changeInfo.hasOwnProperty("index")) {
       this.index = changeInfo.index;
     }
   }
 
   detach() {
-    if(this.group) {
+    if (this.group) {
       this.group.removeTab(this);
     }
   }
@@ -360,7 +371,7 @@ class TabEntry {
 
   updateIcon(icon) {
     let url = icon || "/icons/favicon.svg";
-    if(url.indexOf("chrome://") === 0) {
+    if (url.indexOf("chrome://") === 0) {
       url = "/icons/favicon.svg";
     }
 
